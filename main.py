@@ -49,7 +49,7 @@ def rate_albums(album_list, k=DEFAULT_K):
     
     clear_screen()
     
-    n_matchups = int(input("Number of matchups: "))
+    n_matchups = int(input("\nNumber of matchups: "))
         
     for i in range(n_matchups):
         clear_screen()
@@ -84,6 +84,8 @@ def battle(a, b, k=DEFAULT_K):
         
         elif choice == "3":
             break
+        
+        clear_screen()
 
 def load_album_list():
     album_list = []
@@ -111,7 +113,7 @@ def load_album_list():
 def add_album(album_list, calibration_matchups=DEFAULT_CALIBRATION_MATCHUPS, initial_rating=DEFAULT_INITIAL_RATING, k=DEFAULT_K):
     clear_screen()
     
-    title = input("Album title: ")
+    title = input("\nAlbum title: ")
     artist = input("Artist: ")
     new_album = Album(1, title, artist, initial_rating)
     
@@ -138,7 +140,7 @@ def list_albums(album_list, page_size=DEFAULT_PAGE_SIZE, searchable=True, title=
         else:
             sub_list = album_list[(page-1)*page_size:]
         
-        print(f"{title}\n")
+        print(f"\n{title}\n")
         
         for album in sub_list:
             print(f"{album.rank}. {album.artist} -- {album.title} [{album.rating}]")
@@ -205,30 +207,30 @@ def edit_preferences(preferences, album_list):
         
         if choice == "1":
             try:
-                preferences['initial_rating'] = int(input(f"Current initial rating: {preferences['initial_rating']}\n\nNew initial rating: "))
+                preferences['initial_rating'] = int(input(f"\nCurrent initial rating: {preferences['initial_rating']}\n\nNew initial rating: "))
             except ValueError:
                 pass
             
         elif choice == "2":
             try:
-                preferences['k'] = int(input(f"Current K-factor: {preferences['k']}\n\nNew K-factor: "))
+                preferences['k'] = int(input(f"\nCurrent K-factor: {preferences['k']}\n\nNew K-factor: "))
             except ValueError:
                 pass
         
         elif choice == "3":
             try:
-                preferences['calibration_matchups'] = int(input(f"Current no. calibration matchups: {preferences['calibration_matchups']}\n\nNew no. calibration matchups: "))
+                preferences['calibration_matchups'] = int(input(f"\nCurrent no. calibration matchups: {preferences['calibration_matchups']}\n\nNew no. calibration matchups: "))
             except ValueError:
                 pass
         
         elif choice == "4":
             try:
-                preferences['page_size'] = int(input(f"Current leaderboard page size: {preferences['page_size']}\n\nNew leaderboard page size: "))
+                preferences['page_size'] = int(input(f"\nCurrent leaderboard page size: {preferences['page_size']}\n\nNew leaderboard page size: "))
             except ValueError:
                 pass
         
         elif choice == "5": 
-            print(f"Are you sure you want to reset all ratings to initial rating ({preferences['initial_rating']})?\n\
+            print(f"\nAre you sure you want to reset all ratings to initial rating ({preferences['initial_rating']})?\n\
 1) Yes\n\
 <anything else>) No\n")
             
@@ -239,7 +241,7 @@ def edit_preferences(preferences, album_list):
                     album.set_rating(preferences['initial_rating'])
             
         elif choice == "5":
-            print("Are you sure you want to delete all entries from file?\n\
+            print("\nAre you sure you want to delete all entries from file?\n\
 1) Yes\n\
 <anything else>) No\n")
             
@@ -249,7 +251,7 @@ def edit_preferences(preferences, album_list):
                 album_list = []
         
         elif choice == "7":
-            print("Are you sure you want to reset default preferences?\n\
+            print("\nAre you sure you want to reset default preferences?\n\
 1) Yes\n\
 <anything else>) No\n")
             
@@ -298,11 +300,7 @@ def clear_screen():
 def search_leaderboards(album_list, key):
     clear_screen()
     
-    query = input(f"Search for {key}: ")
-    
-    clear_screen()
-    
-    print(f"Albums with titles matching '{key}'")
+    query = input(f"\nSearch for {key}: ")
     
     match_list = []
     
@@ -321,7 +319,7 @@ def search_leaderboards(album_list, key):
             if int(query) == album.rank:
                 match_list.append(album)
     
-    list_albums(match_list, searchable=False, title=f"Albums with {key} matching '{query}':")
+    list_albums(match_list, searchable=False, title=f"\nAlbums with {key} matching '{query}':")
 
 def main():
     updated = False
@@ -332,6 +330,8 @@ def main():
     
     while(True):
         clear_screen()
+        
+        print("\n")
         
         if updated is True:
             print("[!] You have unsaved changes to album data, select Save and exit (5) to save changes\n")
