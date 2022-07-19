@@ -12,7 +12,7 @@ from os import name, system
 import math
 
 ALBUM_LIST_CSV = "albums.csv"
-PREFERENCES_YAML = "preferences.yml"
+PREFERENCES_YAML = "preferences.yml" #yaml
 
 DEFAULT_INITIAL_RATING = 1200
 DEFAULT_K = 30
