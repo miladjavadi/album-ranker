@@ -52,6 +52,7 @@ def rate_albums(album_list, k=DEFAULT_K):
     n_matchups = int(input("Number of matchups: "))
         
     for i in range(n_matchups):
+        clear_screen()
         
         print(f"\nMatchup {str(i+1)} of {n_matchups}\n")
         
@@ -61,7 +62,6 @@ def rate_albums(album_list, k=DEFAULT_K):
 
 def battle(a, b, k=DEFAULT_K):
     while(True):
-        clear_screen()
         
         print(f"Which of these two albums do you prefer?\n\
 1) {a.artist} -- {a.title}\n\
@@ -116,6 +116,8 @@ def add_album(album_list, calibration_matchups=DEFAULT_CALIBRATION_MATCHUPS, ini
     new_album = Album(1, title, artist, initial_rating)
     
     for i in range(min(calibration_matchups, len(album_list))):
+        clear_screen()
+        
         print(f"\nMatchup {str(i+1)} of {calibration_matchups}\n")
         battle(new_album, random.choice(album_list), k)
     
@@ -191,10 +193,11 @@ def edit_preferences(preferences, album_list):
         print(f"\n1) Set initial rating ({preferences['initial_rating']})\n\
 2) Set K-factor ({preferences['k']})\n\
 3) Set no. calibration matchups ({preferences['calibration_matchups']})\n\
-4) Reset all ratings to initial rating\n\
-5) Delete all entries from file\n\
-6) Reset default preferences\n\
-7) Save and return to main menu\n")
+4) Set leaderboard page size ({preferences['page_size']})\n\
+5) Reset all ratings to initial rating\n\
+6) Delete all entries from file\n\
+7) Reset default preferences\n\
+8) Save and return to main menu\n")
     
         choice = input()
         
@@ -218,7 +221,13 @@ def edit_preferences(preferences, album_list):
             except ValueError:
                 pass
         
-        elif choice == "4": 
+        elif choice == "4":
+            try:
+                preferences['page_size'] = int(input(f"Current leaderboard page size: {preferences['page_size']}\n\nNew leaderboard page size: "))
+            except ValueError:
+                pass
+        
+        elif choice == "5": 
             print(f"Are you sure you want to reset all ratings to initial rating ({preferences['initial_rating']})?\n\
 1) Yes\n\
 <anything else>) No\n")
@@ -239,7 +248,7 @@ def edit_preferences(preferences, album_list):
             if choice == "1":
                 album_list = []
         
-        elif choice == "6":
+        elif choice == "7":
             print("Are you sure you want to reset default preferences?\n\
 1) Yes\n\
 <anything else>) No\n")
@@ -247,9 +256,9 @@ def edit_preferences(preferences, album_list):
             choice = input()
             
             if choice == "1":
-                preferences = {'initial_rating': DEFAULT_INITIAL_RATING, 'k': DEFAULT_K, 'calibration_matchups': DEFAULT_CALIBRATION_MATCHUPS}
+                preferences = {'initial_rating': DEFAULT_INITIAL_RATING, 'k': DEFAULT_K, 'calibration_matchups': DEFAULT_CALIBRATION_MATCHUPS, 'page_size': DEFAULT_PAGE_SIZE}
                 
-        elif choice == "7":
+        elif choice == "8":
             with open(PREFERENCES_YAML, 'w+') as f:
                 yaml.dump(preferences, f)
             return preferences, album_list
@@ -267,7 +276,7 @@ def config():
     try:
         preferences = yaml.safe_load(open(PREFERENCES_YAML))
     except FileNotFoundError:
-        preferences = {'initial_rating': DEFAULT_INITIAL_RATING, 'k': DEFAULT_K, 'calibration_matchups': DEFAULT_CALIBRATION_MATCHUPS}
+        preferences = {'initial_rating': DEFAULT_INITIAL_RATING, 'k': DEFAULT_K, 'calibration_matchups': DEFAULT_CALIBRATION_MATCHUPS, 'page_size': DEFAULT_PAGE_SIZE}
         with open(PREFERENCES_YAML, 'w') as f:
             yaml.dump(preferences, f)
     return preferences
@@ -346,7 +355,7 @@ def main():
             updated = True
         
         elif choice == "3":
-            list_albums(album_list)
+            list_albums(album_list, preferences['page_size'])
             
         elif choice == "4":
             preferences, album_list = edit_preferences(preferences, album_list)
