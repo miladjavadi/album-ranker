@@ -11,7 +11,7 @@ import random
 DEFAULT_RATING = 1200
 ALBUM_LIST_CSV = "albums.csv"
 K = 30
-INITIAL_MATCHUPS = 10
+CALIBRATION_MATCHUPS = 10
 
 class Album:
     def __init__(self, title, artist, rating):
@@ -93,8 +93,8 @@ def add_album(album_list):
     artist = input("Artist (no semicolon): ")
     new_album = Album(title, artist, DEFAULT_RATING)
     
-    for i in range(INITIAL_MATCHUPS):
-        print(f"\nMatchup {str(i+1)} of {INITIAL_MATCHUPS}\n")
+    for i in range(min(CALIBRATION_MATCHUPS, len(album_list))):
+        print(f"\nMatchup {str(i+1)} of {CALIBRATION_MATCHUPS}\n")
         battle(new_album, random.choice(album_list))
     
     print("\n")
