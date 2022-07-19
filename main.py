@@ -11,7 +11,7 @@ import random
 DEFAULT_RATING = 1200
 ALBUM_LIST_CSV = "albums.csv"
 K = 30
-CALIBRATION_MATCHUPS = 10
+CALIBRATION_MATCHUPS = 15
 
 class Album:
     def __init__(self, title, artist, rating):
