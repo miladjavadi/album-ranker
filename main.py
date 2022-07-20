@@ -10,6 +10,8 @@ import random
 import yaml
 from os import name, system 
 import math
+import spotipy
+import requests
 
 ALBUM_LIST_CSV = "albums.csv"
 PREFERENCES_YAML = "preferences.yml" #yaml
@@ -321,6 +323,21 @@ def search_leaderboards(album_list, key, page_size=DEFAULT_PAGE_SIZE):
     
     list_albums(match_list, searchable=False, page_size=page_size, title=f"\nAlbums with {key} matching '{query}':")
     
+"""def init_spotify():
+    token_url = "https://accounts.spotify.com/authorize"
+    method =  "GET"
+    
+    client_id = "cc8ff7b4b79d4b8b9be44854bdb9fbb3"
+    response_type = "token"
+    redirect_uri = "http://localhost:8888/callback"
+    
+    token_url += "?response_type=" + response_type
+    token_url += "&client_id=" + client_id
+    token_url += "&redirect_uri=" + redirect_uri
+    
+    r = requests.get(token_url)
+    
+    print(r.json())"""
     
 def main():
     updated = False
@@ -328,6 +345,8 @@ def main():
     album_list = load_album_list()
     
     preferences = config()
+    
+    # init_spotify()
     
     while(True):
         clear_screen()
