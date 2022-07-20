@@ -499,6 +499,17 @@ def join_multiple_artists(artist_list):
     else:
         return ", ".join(artist_list)
         
+# def show_recommendations(album_list, spotify_token, spotify_client_is_ready=True):
+#     top_albums = album_list[:29]
+    
+#     top_elos = {}
+    
+#     for album in top_albums:
+#         if album.artist not in top_elos:
+#             top_elos[album.artist] = album.rating
+#         else:
+#             top_elos[album.artist] += album.rating
+
 def main():
     updated = False
     
@@ -549,9 +560,12 @@ def main():
             
         elif choice == "4":
             preferences, album_list = edit_preferences(preferences, album_list)
-            
+        
+        # elif choice == "5":
+        #     show_recommendations(album_list, spotify_token, spotify_client_is_ready)
+        
         elif choice == "5":
             prepare_to_exit(album_list)
-            break
+            return
         
 main()
