@@ -10,6 +10,8 @@ import random
 import yaml
 from os import name, system 
 import math
+import spotipy
+import requests
 
 ALBUM_LIST_CSV = "albums.csv"
 PREFERENCES_YAML = "preferences.yml" #yaml
@@ -179,13 +181,13 @@ def list_albums(album_list, page_size=DEFAULT_PAGE_SIZE, searchable=True, title=
         
         if searchable:
             if choice == "6":
-                search_leaderboards(album_list, 'title')
+                search_leaderboards(album_list, 'title', page_size)
             
             elif choice == "7":
-                search_leaderboards(album_list, 'artist')
+                search_leaderboards(album_list, 'artist', page_size)
             
             elif choice == "8":
-                search_leaderboards(album_list, 'rank')
+                search_leaderboards(album_list, 'rank', page_size)
     
 def edit_preferences(preferences, album_list):
     
@@ -297,7 +299,7 @@ def clear_screen():
     else:
         _ = system('clear')
 
-def search_leaderboards(album_list, key):
+def search_leaderboards(album_list, key, page_size=DEFAULT_PAGE_SIZE):
     clear_screen()
     
     query = input(f"\nSearch for {key}: ")
@@ -319,14 +321,32 @@ def search_leaderboards(album_list, key):
             if int(query) == album.rank:
                 match_list.append(album)
     
-    list_albums(match_list, searchable=False, title=f"\nAlbums with {key} matching '{query}':")
-
+    list_albums(match_list, searchable=False, page_size=page_size, title=f"\nAlbums with {key} matching '{query}':")
+    
+"""def init_spotify():
+    token_url = "https://accounts.spotify.com/authorize"
+    method =  "GET"
+    
+    client_id = "cc8ff7b4b79d4b8b9be44854bdb9fbb3"
+    response_type = "token"
+    redirect_uri = "http://localhost:8888/callback"
+    
+    token_url += "?response_type=" + response_type
+    token_url += "&client_id=" + client_id
+    token_url += "&redirect_uri=" + redirect_uri
+    
+    r = requests.get(token_url)
+    
+    print(r.json())"""
+    
 def main():
     updated = False
     
     album_list = load_album_list()
     
     preferences = config()
+    
+    # init_spotify()
     
     while(True):
         clear_screen()
@@ -341,6 +361,7 @@ def main():
 3) Leaderboards\n\
 4) Preferences\n\
 5) Save and exit\n")
+        
         
         choice = input()
     
