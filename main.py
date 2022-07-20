@@ -8,13 +8,18 @@ Created on Mon Jul 18 23:37:35 2022
 import csv
 import random
 import yaml
-from os import name, system 
+from os import name, system, path
 import math
-import spotipy
+from base64 import b64encode, b64decode
 import requests
+import datetime
+import json
+
+import spotify_api
 
 ALBUM_LIST_CSV = "albums.csv"
 PREFERENCES_YAML = "preferences.yml" #yaml
+SPOTIFY_TOKEN_PATH = "spotify_token.json"
 
 DEFAULT_INITIAL_RATING = 1200
 DEFAULT_K = 30
@@ -33,6 +38,12 @@ class Album:
         
     def set_rank(self, rank):
         self.rank = rank
+
+class ExpiredTokenError(Exception):
+    pass
+
+class AuthError(Exception):
+    pass
 
 def expected_score(rating_a, rating_b):
     e_score = 1 / (1 + (10**((rating_b - rating_a) / 400)))
@@ -324,20 +335,50 @@ def search_leaderboards(album_list, key, page_size=DEFAULT_PAGE_SIZE):
     list_albums(match_list, searchable=False, page_size=page_size, title=f"\nAlbums with {key} matching '{query}':")
     
 def init_spotify():
-    token_url = "https://accounts.spotify.com/authorize"
-    method =  "GET"
     
-    client_id = "cc8ff7b4b79d4b8b9be44854bdb9fbb3"
-    response_type = "token"
-    redirect_uri = "http://localhost:8888/callback"
+    now_dt = datetime.datetime.now()
+    now = datetime.datetime.timestamp(now_dt)*1000
     
-    token_url += "?response_type=" + response_type
-    token_url += "&client_id=" + client_id
-    token_url += "&redirect_uri=" + redirect_uri
-    
-    r = requests.get(token_url)
-    
-    print(r)
+    try:
+        with open(SPOTIFY_TOKEN_PATH, 'r') as f:
+            token_and_expiration = json.load(f)
+            f.close()
+        
+        access_token = token_and_expiration['access_token']
+        expires = token_and_expiration['expires']
+        
+        if expires < now:
+            raise ExpiredTokenError
+        
+    except (FileNotFoundError, ExpiredTokenError):
+        token_url = "https://accounts.spotify.com/api/token"
+        method =  "POST"
+        
+        client_id = spotify_api.client_id
+        client_secret = spotify_api.client_secret
+        
+        client_credentials = f"{client_id}:{client_secret}"
+        client_credentials_b64 = b64encode(client_credentials.encode())
+        
+        token_data = {"grant_type": "client_credentials"}
+        token_header = {"Authorization": f"Basic {client_credentials_b64.decode()}"}
+        
+        r = requests.post(token_url, data=token_data, headers=token_header)
+        
+        request_response = r.json()
+        
+        if r.status_code not in range(200, 299):
+            raise AuthError
+        
+        access_token = request_response['access_token']
+        expires_in = int(request_response['expires_in'])
+        
+        expires = now + expires_in
+        
+        token_and_expiration = {'access_token': access_token, 'expires': expires}
+        
+        with open(SPOTIFY_TOKEN_PATH, 'w+') as f:
+            json.dump(f, token_and_expiration)
     
 def main():
     updated = False
