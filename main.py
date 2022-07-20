@@ -77,7 +77,7 @@ def rate_albums(album_list, k=DEFAULT_K):
     for i in range(n_matchups):
         clear_screen()
         
-        print(f"\nMatchup {str(i+1)} of {n_matchups}\n")
+        print(f"\nMatchup {str(i+1)} of {n_matchups}")
         
         album_a, album_b = [random.sample(album_list, 2)[i] for i in [0, 1]]
         
@@ -86,10 +86,10 @@ def rate_albums(album_list, k=DEFAULT_K):
 def battle(a, b, k=DEFAULT_K):
     while(True):
         
-        print(f"Which of these two albums do you prefer?\n\
+        print(f"\nWhich of these two albums do you prefer?\n\
 1) {a}\n\
 2) {b}\n\
-3) Draw")
+3) Draw\n")
     
         choice = input()
 
@@ -159,7 +159,7 @@ def add_album(album_list, calibration_matchups=DEFAULT_CALIBRATION_MATCHUPS, ini
     for i in range(min(calibration_matchups, len(album_list))):
         clear_screen()
         
-        print(f"\nMatchup {str(i+1)} of {calibration_matchups}\n")
+        print(f"\nMatchup {str(i+1)} of {calibration_matchups}")
         battle(new_album, random.choice(album_list), k)
     
     print("\n")
@@ -224,7 +224,7 @@ def select_from_search_results(album_list, query):
         print(f"\nPage {page}/{n_pages}\n\n\
 8) Previous page\n\
 9) Next page\n\n\
-0) Cancel")
+0) Cancel\n")
     
         choice = input()
         
@@ -277,10 +277,10 @@ def list_albums(album_list, page_size=DEFAULT_PAGE_SIZE, searchable=True, title=
             print("5) Return to main menu\n\n\
 6) Search by title\n\
 7) Search by artist\n\
-8) Search by rank")
+8) Search by rank\n")
         
         else:
-            print("5) Return")
+            print("5) Return\n")
         
         choice = input()
         
