@@ -140,7 +140,9 @@ def add_album(album_list, calibration_matchups=DEFAULT_CALIBRATION_MATCHUPS, ini
     
     if choice == "1":
         if not spotify_client_is_ready:
-            input("Spotify API client not successfully initialized, please check credentials in 'spotify_api.py'")
+            clear_screen()
+            
+            input("\nSpotify API client not successfully initialized, please check credentials in 'spotify_api.py'")
             raise AuthError
             
         else:
@@ -502,6 +504,8 @@ def main():
     preferences = config()
     
     spotify_client_is_ready = False
+    spotify_token = None
+    
     try: 
         spotify_token = init_spotify()
         spotify_client_is_ready = True
