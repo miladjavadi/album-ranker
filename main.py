@@ -26,7 +26,9 @@ DEFAULT_INITIAL_RATING = 1200
 DEFAULT_K = 30
 DEFAULT_CALIBRATION_MATCHUPS = 15
 DEFAULT_PAGE_SIZE = 30
+
 SEARCH_PAGE_SIZE = 7
+MAX_SEARCH_RESULTS = 28
 
 class Album:
     def __init__(self, rank, title, artist, rating):
@@ -131,7 +133,7 @@ def load_album_list():
 def add_album(album_list, calibration_matchups=DEFAULT_CALIBRATION_MATCHUPS, initial_rating=DEFAULT_INITIAL_RATING, k=DEFAULT_K, spotify_client_is_ready=False, spotify_token=None):
     clear_screen() 
     
-    print("1) Search for album on Spotify\n\
+    print("\n1) Search for album on Spotify\n\
 2) Add album manually\n")
     
     choice = input()
@@ -168,7 +170,7 @@ def search_album_spotify(access_token):
         
         header = {"Authorization": f"Bearer {access_token}"}
         endpoint = "https://api.spotify.com/v1/search"
-        data = urlencode({"q": query, "type": "album"})
+        data = urlencode({"q": query, "type": "album", "limit": MAX_SEARCH_RESULTS})
         
         lookup_url = f"{endpoint}?{data}"
         
@@ -226,10 +228,10 @@ def select_from_search_results(album_list, query):
             return selected_album
         
         elif choice == "8":
-            page == max(1, page-1)
+            page = max(1, page-1)
             
         elif choice == "9":
-            page == min(n_pages, page+1)
+            page = min(n_pages, page+1)
         
         elif choice == "0":
             return False
@@ -510,13 +512,12 @@ def main():
     while(True):
         clear_screen()
         
-        print("\n")
         
         if updated is True:
-            print("[!] You have unsaved changes to album data, select Save and exit (5) to save changes\n")
+            print("\n[!] You have unsaved changes to album data, select Save and exit (5) to save changes")
             
-        print("1) Rate albums head-to-head\n\
-2) Add new album manually\n\
+        print("\n1) Rate albums head-to-head\n\
+2) Add new album\n\
 3) Leaderboards\n\
 4) Preferences\n\
 5) Save and exit\n")
