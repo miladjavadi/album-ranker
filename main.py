@@ -15,6 +15,8 @@ import requests
 import datetime
 import json
 from urllib.parse import urlencode
+import webbrowser
+from requestium import Session, Keys
 
 import spotify_api
 
@@ -443,7 +445,7 @@ def search_leaderboards(album_list, key, page_size=DEFAULT_PAGE_SIZE):
     
     list_albums(match_list, searchable=False, page_size=page_size, title=f"\nAlbums with {key} matching '{query}':")
     
-def init_spotify():
+"""def init_spotify():
     
     now_dt = datetime.datetime.now()
     now = datetime.datetime.timestamp(now_dt)*1000
@@ -490,7 +492,36 @@ def init_spotify():
             json.dump(token_and_expiration, f)
             
     
-    return access_token
+    return access_token"""
+
+def init_spotify():
+    endpoint = "https://accounts.spotify.com/authorize"
+    method =  "POST"
+    
+    client_id = spotify_api.client_id
+    response_type = "token"
+    redirect_URI = "http://localhost:8080/"
+    scope = "user-read-email"
+    
+    auth_data = urlencode({'response_type': response_type, 'client_id': client_id, 'scope': scope, 'redirect_uri': redirect_URI})
+    
+    lookup_url = f"{endpoint}?{auth_data}"
+    
+    webbrowser.open(lookup_url)
+    
+    input("Log into Spotify, then press enter :)")
+    
+    headers = {
+        'Content-Type': 'application/json'
+    }
+    
+    credentials = "include"
+    
+    r = requests.post("http://localhost:8888/getAccessToken", headers=headers)
+    
+    print(r.json())
+    
+    input()
 
 def join_multiple_artists(artist_list):
     if len(artist_list) > 3:
