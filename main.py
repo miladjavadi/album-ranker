@@ -43,6 +43,9 @@ class Album:
     def set_rank(self, rank):
         self.rank = rank
     
+    def __str__(self):
+        return f"{self.artist} -- {self.title}"
+    
     def __bool__(self):
         return True
 
@@ -84,8 +87,8 @@ def battle(a, b, k=DEFAULT_K):
     while(True):
         
         print(f"Which of these two albums do you prefer?\n\
-1) {a.artist} -- {a.title}\n\
-2) {b.artist} -- {b.title}\n\
+1) {a}\n\
+2) {b}\n\
 3) Draw")
     
         choice = input()
@@ -216,7 +219,7 @@ def select_from_search_results(album_list, query):
         print(f"\nResults for '{query}':\n")
         
         for album in sub_list:
-            print(f"{str(sub_list.index(album)+1)}) {album.artist} -- {album.title}\n")
+            print(f"{str(sub_list.index(album)+1)}) {album}\n")
         
         print(f"\nPage {page}/{n_pages}\n\n\
 8) Previous page\n\
@@ -262,7 +265,7 @@ def list_albums(album_list, page_size=DEFAULT_PAGE_SIZE, searchable=True, title=
         print(f"\n{title}\n")
         
         for album in sub_list:
-            print(f"{album.rank}. {album.artist} -- {album.title} [{album.rating}]")
+            print(f"{album.rank}. {album} [{album.rating}]")
         
         print(f"\nPage {page} of {n_pages}\n\n\
 1) Previous page\n\
@@ -515,7 +518,6 @@ def main():
     
     while(True):
         clear_screen()
-        
         
         if updated is True:
             print("\n[!] You have unsaved changes to album data, select Save and exit (5) to save changes")
