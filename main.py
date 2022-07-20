@@ -323,7 +323,7 @@ def search_leaderboards(album_list, key, page_size=DEFAULT_PAGE_SIZE):
     
     list_albums(match_list, searchable=False, page_size=page_size, title=f"\nAlbums with {key} matching '{query}':")
     
-"""def init_spotify():
+def init_spotify():
     token_url = "https://accounts.spotify.com/authorize"
     method =  "GET"
     
@@ -337,7 +337,7 @@ def search_leaderboards(album_list, key, page_size=DEFAULT_PAGE_SIZE):
     
     r = requests.get(token_url)
     
-    print(r.json())"""
+    print(r)
     
 def main():
     updated = False
@@ -346,7 +346,9 @@ def main():
     
     preferences = config()
     
-    # init_spotify()
+    init_spotify()
+    
+    input()
     
     while(True):
         clear_screen()
