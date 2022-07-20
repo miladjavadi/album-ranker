@@ -14,6 +14,7 @@ from base64 import b64encode, b64decode
 import requests
 import datetime
 import json
+from urllib.parse import urlencode
 
 import spotify_api
 
@@ -25,6 +26,7 @@ DEFAULT_INITIAL_RATING = 1200
 DEFAULT_K = 30
 DEFAULT_CALIBRATION_MATCHUPS = 15
 DEFAULT_PAGE_SIZE = 30
+SEARCH_PAGE_SIZE = 7
 
 class Album:
     def __init__(self, rank, title, artist, rating):
@@ -38,6 +40,9 @@ class Album:
         
     def set_rank(self, rank):
         self.rank = rank
+    
+    def __bool__(self):
+        return True
 
 class ExpiredTokenError(Exception):
     pass
@@ -123,11 +128,25 @@ def load_album_list():
     
     return album_list
 
-def add_album(album_list, calibration_matchups=DEFAULT_CALIBRATION_MATCHUPS, initial_rating=DEFAULT_INITIAL_RATING, k=DEFAULT_K):
-    clear_screen()
+def add_album(album_list, calibration_matchups=DEFAULT_CALIBRATION_MATCHUPS, initial_rating=DEFAULT_INITIAL_RATING, k=DEFAULT_K, spotify_client_is_ready=False, spotify_token=None):
+    clear_screen() 
     
-    title = input("\nAlbum title: ")
-    artist = input("Artist: ")
+    print("1) Search for album on Spotify\n\
+2) Add album manually\n")
+    
+    choice = input()
+    
+    if choice == "1":
+        if not spotify_client_is_ready:
+            input("Spotify API client not successfully initialized, please check credentials in 'spotify_api.py'")
+            raise AuthError
+            
+        else:
+            title, artist = search_album_spotify(spotify_token)
+    
+    if choice == "2":
+        title, artist = manual_album_input()
+    
     new_album = Album(1, title, artist, initial_rating)
     
     for i in range(min(calibration_matchups, len(album_list))):
@@ -139,6 +158,89 @@ def add_album(album_list, calibration_matchups=DEFAULT_CALIBRATION_MATCHUPS, ini
     print("\n")
     
     return new_album
+
+def search_album_spotify(access_token):
+    
+    while(True):
+        clear_screen()
+        
+        query = input("\nSearch for album on Spotify: ")
+        
+        header = {"Authorization": f"Bearer {access_token}"}
+        endpoint = "https://api.spotify.com/v1/search"
+        data = urlencode({"q": query, "type": "album"})
+        
+        lookup_url = f"{endpoint}?{data}"
+        
+        r = requests.get(lookup_url, headers=header)
+        
+        r_dic = r.json()
+        
+        result_list = []
+        
+        if r.status_code in range(200, 299):
+            for album in r_dic['albums']['items']:
+                title = album['name']
+                artist = join_multiple_artists([x['name'] for x in album['artists']])
+                result_list.append(Album(1, title, artist, 0))
+        
+        selected_album = select_from_search_results(result_list, query)
+        
+        if selected_album:
+            break
+        
+        else:
+            pass
+    
+    return selected_album.title, selected_album.artist
+    
+def select_from_search_results(album_list, query):
+    page_size = SEARCH_PAGE_SIZE
+    
+    page = 1
+    n_pages = math.ceil(len(album_list)/page_size)
+    
+    while(True):
+        clear_screen()
+        
+        if page < page_size: 
+            sub_list = album_list[(page-1)*page_size:page*page_size]
+        
+        else:
+            sub_list = album_list[(page-1)*page_size:]
+            
+        print(f"\nResults for '{query}':\n")
+        
+        for album in sub_list:
+            print(f"{str(sub_list.index(album)+1)}) {album.artist} -- {album.title}\n")
+        
+        print(f"\nPage {page}/{n_pages}\n\n\
+8) Previous page\n\
+9) Next page\n\n\
+0) Cancel")
+    
+        choice = input()
+        
+        if choice in [str(x) for x in range(1, 8)]:
+            selected_album = sub_list[int(choice)-1]
+            return selected_album
+        
+        elif choice == "8":
+            page == max(1, page-1)
+            
+        elif choice == "9":
+            page == min(n_pages, page+1)
+        
+        elif choice == "0":
+            return False
+
+def manual_album_input():
+    clear_screen()
+    
+    title = input("\nAlbum title: ")
+    artist = input("Artist: ")
+    
+    return title, artist
 
 def list_albums(album_list, page_size=DEFAULT_PAGE_SIZE, searchable=True, title="Leaderboards:"): 
     page = 1
@@ -378,8 +480,18 @@ def init_spotify():
         token_and_expiration = {'access_token': access_token, 'expires': expires}
         
         with open(SPOTIFY_TOKEN_PATH, 'w+') as f:
-            json.dump(f, token_and_expiration)
+            json.dump(token_and_expiration, f)
+            
     
+    return access_token
+
+def join_multiple_artists(artist_list):
+    if len(artist_list) > 3:
+        return "Various Artists"
+    
+    else:
+        return ", ".join(artist_list)
+        
 def main():
     updated = False
     
@@ -387,9 +499,13 @@ def main():
     
     preferences = config()
     
-    init_spotify()
+    spotify_client_is_ready = False
+    try: 
+        spotify_token = init_spotify()
+        spotify_client_is_ready = True
     
-    input()
+    except AuthError:
+        pass
     
     while(True):
         clear_screen()
@@ -400,7 +516,7 @@ def main():
             print("[!] You have unsaved changes to album data, select Save and exit (5) to save changes\n")
             
         print("1) Rate albums head-to-head\n\
-2) Add new album\n\
+2) Add new album manually\n\
 3) Leaderboards\n\
 4) Preferences\n\
 5) Save and exit\n")
@@ -414,9 +530,12 @@ def main():
             updated = True
             
         elif choice == "2":
-            album_list.append(add_album(album_list, preferences['calibration_matchups'], preferences['initial_rating'], preferences['k']))
-            album_list = sort_and_rank(album_list)
-            updated = True
+            try:
+                album_list.append(add_album(album_list, preferences['calibration_matchups'], preferences['initial_rating'], preferences['k'], spotify_client_is_ready, spotify_token))
+                album_list = sort_and_rank(album_list)
+                updated = True
+            except AuthError:
+                pass
         
         elif choice == "3":
             list_albums(album_list, preferences['page_size'])
