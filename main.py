@@ -8,23 +8,16 @@ Created on Mon Jul 18 23:37:35 2022
 import csv
 import random
 import yaml
-from os import name, system, path
+from os import name, system
 import math
-from base64 import b64encode, b64decode
 import requests
 import datetime
 import json
 from urllib.parse import urlencode, parse_qs
-import webbrowser
 import sys
 from PyQt5.QtWidgets import *
 from PyQt5.QtWebEngineWidgets import *
 from PyQt5.QtCore import *
-# from requestium import Session, Keys
-# from selenium import webdriver
-
-
-# import spotify_api
 
 
 ALBUM_LIST_CSV = "albums.csv"
@@ -459,52 +452,6 @@ def search_leaderboards(album_list, key, page_size=DEFAULT_PAGE_SIZE):
                 match_list.append(album)
     
     list_albums(match_list, searchable=False, page_size=page_size, title=f"\nAlbums with {key} matching '{query}':")
-    
-def init_spotify_client_credentials(client_id, client_secret): #not used anymore, left here for legacy purposes
-    
-    now_dt = datetime.datetime.now()
-    now = datetime.datetime.timestamp(now_dt)*1000
-    
-    try:
-        with open(SPOTIFY_TOKEN_PATH, 'r') as f:
-            token_and_expiration = json.load(f)
-            f.close()
-        
-        access_token = token_and_expiration['access_token']
-        expires = token_and_expiration['expires']
-        
-        if expires < now:
-            raise ExpiredTokenError
-        
-    except (FileNotFoundError, ExpiredTokenError):
-        token_url = "https://accounts.spotify.com/api/token"
-        method =  "POST"
-        
-        client_credentials = f"{client_id}:{client_secret}"
-        client_credentials_b64 = b64encode(client_credentials.encode())
-        
-        token_data = {"grant_type": "client_credentials"}
-        token_header = {"Authorization": f"Basic {client_credentials_b64.decode()}"}
-        
-        r = requests.post(token_url, data=token_data, headers=token_header)
-        
-        request_response = r.json()
-        
-        if r.status_code not in range(200, 299):
-            raise AuthError
-        
-        access_token = request_response['access_token']
-        expires_in = int(request_response['expires_in'])
-        
-        expires = now + expires_in
-        
-        token_and_expiration = {'access_token': access_token, 'expires': expires}
-        
-        with open(SPOTIFY_TOKEN_PATH, 'w+') as f:
-            json.dump(token_and_expiration, f)
-            
-    
-    return access_token
 
 def init_spotify(token):
     now_dt = datetime.datetime.now()
