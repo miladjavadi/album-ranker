@@ -5,6 +5,7 @@ Created on Mon Jul 18 23:37:35 2022
 @author: Milad
 """
 
+# from standard library
 import csv
 import random
 from os import name, system
@@ -14,28 +15,31 @@ import json
 from urllib.parse import urlencode, parse_qs
 import sys
 
+# other packages
 import requests
 import yaml
 from PyQt5.QtWidgets import *
 from PyQt5.QtWebEngineWidgets import *
 from PyQt5.QtCore import *
 
-
+# directories
 ALBUM_LIST_CSV = "albums.csv"
 PREFERENCES_YAML = "preferences.yml" #yaml
 SPOTIFY_TOKEN_PATH = "spotify_token.json"
 
+# spotify app client ID
 CLIENT_ID = "cc8ff7b4b79d4b8b9be44854bdb9fbb3"
 
-DEFAULT_INITIAL_RATING = 1200
-DEFAULT_K = 30
-DEFAULT_CALIBRATION_MATCHUPS = 15
-DEFAULT_PAGE_SIZE = 30
-
-SEARCH_PAGE_SIZE = 7
-MAX_SEARCH_RESULTS = 28
+# some constants
+DEFAULT_INITIAL_RATING = 1200 # sets default initial elo rating when adding albums
+DEFAULT_K = 30 # sets default k-coefficient when adjusting rating
+DEFAULT_CALIBRATION_MATCHUPS = 15 # sets default no. matchups for calibrating new album
+DEFAULT_PAGE_SIZE = 30 # sets default no. entries per page in leaderboards
+SEARCH_PAGE_SIZE = 7 # sets no. results per page when searching on spotify
+MAX_SEARCH_RESULTS = 28 # sets max no. results when searching on spotify 
 
 class Album:
+    
     def __init__(self, rank, title, artist, rating):
         self.rank = rank
         self.title = title
@@ -43,7 +47,7 @@ class Album:
         self.rating = rating
     
     def set_rating(self, new_rating):
-        self.rating = round(new_rating)
+        self.rating = round(new_rating) # elo is rounded to nearest int
         
     def set_rank(self, rank):
         self.rank = rank
@@ -51,31 +55,40 @@ class Album:
     def __str__(self):
         return f"{self.artist} -- {self.title}"
     
-    def __bool__(self):
-        return True
+    def __bool__(self): # used for checking if a function returns an album instance
+        return True 
 
-class SpotifyLogin: 
+class SpotifyLogin:
+ 
+    # stores spotify token and user info
+    
     def __init__(self):
         self.token=None
-        self.expires=None
-        self.account_name=None
+        self.expires=None # as POSIX timestamp
+        self.account_name=None # spotify display name
     
     def as_dict(self):
         return {'access_token': self.token, 'expires': self.expires}
 
-class ExpiredTokenError(Exception):
+class ExpiredTokenError(Exception): # raise when token is invalid (i.e. expired)
     pass
 
-class AuthError(Exception):
+class AuthError(Exception): # raise when spotify authorization is unsuccessful
     pass
 
 def expected_score(rating_a, rating_b):
+    
+    # returns elo expected score (win prob. + draw prob./2)
+    
     e_score = 1 / (1 + (10**((rating_b - rating_a) / 400)))
     return e_score
 
 def rate_1v1(w, l, k=DEFAULT_K):
-    rating_w = w.rating
-    rating_l = l.rating
+    
+    # returns adjusted elo after matchup
+    
+    rating_w = w.rating # old rating of winner
+    rating_l = l.rating # old rating of loser
     
     rating_w += k*(1-expected_score(rating_w, rating_l))
     rating_l += k*(-expected_score(rating_w, rating_l))
@@ -83,6 +96,8 @@ def rate_1v1(w, l, k=DEFAULT_K):
     return rating_w, rating_l
 
 def rate_albums(album_list, k=DEFAULT_K):
+    
+    # performs a number of matchups between random albums
     
     clear_screen()
     
@@ -98,6 +113,9 @@ def rate_albums(album_list, k=DEFAULT_K):
         battle(album_a, album_b)
 
 def battle(a, b, k=DEFAULT_K):
+    
+    # performs a single matchup between two albums
+    
     while(True):
         
         print(f"\nWhich of these two albums do you prefer?\n\
@@ -125,6 +143,9 @@ def battle(a, b, k=DEFAULT_K):
         clear_screen()
 
 def load_album_list():
+    
+    # loads in list of albums from file as list of album objects
+    
     album_list = []
     
     try:
@@ -148,6 +169,9 @@ def load_album_list():
     return album_list
 
 def add_album(album_list, calibration_matchups=DEFAULT_CALIBRATION_MATCHUPS, initial_rating=DEFAULT_INITIAL_RATING, k=DEFAULT_K, spotify_client_is_ready=False, spotify_token=None):
+    
+    # finds a new album and adds to list
+    
     clear_screen() 
     
     print("\n1) Search for album on Spotify\n\
@@ -191,6 +215,8 @@ def add_album(album_list, calibration_matchups=DEFAULT_CALIBRATION_MATCHUPS, ini
 
 def search_album_spotify(access_token):
     
+    # uses spotify search engine to find album based on user input query
+    
     while(True):
         clear_screen()
         
@@ -225,6 +251,9 @@ def search_album_spotify(access_token):
     return selected_album.title, selected_album.artist
     
 def select_from_search_results(album_list, query):
+    
+    # displays spotify search results and returns selected album
+    
     page_size = SEARCH_PAGE_SIZE
     
     page = 1
@@ -265,6 +294,9 @@ def select_from_search_results(album_list, query):
             return False
 
 def manual_album_input():
+    
+    # adds new album to list manually
+    
     clear_screen()
     
     title = input("\nAlbum title: ")
@@ -273,6 +305,9 @@ def manual_album_input():
     return title, artist
 
 def list_albums(album_list, page_size=DEFAULT_PAGE_SIZE, searchable=True, title="Leaderboards:"): 
+    
+    # displays leaderboards
+    
     page = 1
     n_pages = math.ceil(len(album_list)/page_size)
     
@@ -333,6 +368,8 @@ def list_albums(album_list, page_size=DEFAULT_PAGE_SIZE, searchable=True, title=
                 search_leaderboards(album_list, 'rank', page_size)
     
 def edit_preferences(preferences, album_list):
+    
+    # display settings menu where user can adjust different parameters
     
     while(True):
         clear_screen()
@@ -411,6 +448,9 @@ def edit_preferences(preferences, album_list):
             return preferences, album_list
     
 def prepare_to_exit(album_list):
+    
+    # saves album list to file and clears screen
+    
     album_list.sort(key=lambda x: x.rating, reverse=True)
     with open(ALBUM_LIST_CSV, 'w+', newline='', encoding="utf8") as f:
         csv_writer = csv.writer(f, delimiter=";")
@@ -422,6 +462,9 @@ def prepare_to_exit(album_list):
     clear_screen()
 
 def config():
+    
+    # loads user preferences
+    
     try:
         preferences = yaml.safe_load(open(PREFERENCES_YAML))
     except FileNotFoundError:
@@ -431,6 +474,9 @@ def config():
     return preferences
     
 def sort_and_rank(album_list):
+    
+    # sorts album list by elo rating
+    
     album_list.sort(key=lambda x: x.rating, reverse=True)
     for album in album_list:
         album.set_rank(album_list.index(album)+1)
@@ -438,13 +484,21 @@ def sort_and_rank(album_list):
     return album_list
 
 def clear_screen():
+    
+    # clears the terminal window
+    
+    # windows
     if name == 'nt':
         _ = system('cls')
-  
+    
+    # unix
     else:
         _ = system('clear')
 
 def search_leaderboards(album_list, key, page_size=DEFAULT_PAGE_SIZE):
+    
+    # filters the leaderboards by different parameters
+    
     clear_screen()
     
     query = input(f"\nSearch for {key}: ")
@@ -469,6 +523,9 @@ def search_leaderboards(album_list, key, page_size=DEFAULT_PAGE_SIZE):
     list_albums(match_list, searchable=False, page_size=page_size, title=f"\nAlbums with {key} matching '{query}':")
 
 def log_in_to_spotify(login):
+    
+    # prompts user to log into spotify
+    
     now_dt = datetime.datetime.now()
     now = datetime.datetime.timestamp(now_dt)
     
@@ -528,6 +585,9 @@ def log_in_to_spotify(login):
         return True
 
 def update_url(url, login, now):
+    
+    # slot for when url in browser is updated
+    
     url_str = url.toString()
     if "http://localhost:8888/" in url_str:
         if "access_token=" in url_str:            
@@ -547,6 +607,8 @@ def update_url(url, login, now):
     
 
 def auto_login(login, now=datetime.datetime.timestamp(datetime.datetime.now())):
+    
+    # attempts to log in to spotify using previously granted token
     
     try:
         with open(SPOTIFY_TOKEN_PATH, 'r') as f:
@@ -585,6 +647,9 @@ def auto_login(login, now=datetime.datetime.timestamp(datetime.datetime.now())):
     return True
 
 def join_multiple_artists(artist_list):
+    
+    # strings together list of artist names 
+    
     if len(artist_list) > 3:
         return "Various Artists"
     
