@@ -7,14 +7,15 @@ Created on Mon Jul 18 23:37:35 2022
 
 import csv
 import random
-import yaml
 from os import name, system
 import math
-import requests
 import datetime
 import json
 from urllib.parse import urlencode, parse_qs
 import sys
+
+import requests
+import yaml
 from PyQt5.QtWidgets import *
 from PyQt5.QtWebEngineWidgets import *
 from PyQt5.QtCore import *
@@ -23,6 +24,8 @@ from PyQt5.QtCore import *
 ALBUM_LIST_CSV = "albums.csv"
 PREFERENCES_YAML = "preferences.yml" #yaml
 SPOTIFY_TOKEN_PATH = "spotify_token.json"
+
+CLIENT_ID = "cc8ff7b4b79d4b8b9be44854bdb9fbb3"
 
 DEFAULT_INITIAL_RATING = 1200
 DEFAULT_K = 30
@@ -481,7 +484,7 @@ def init_spotify(token):
         
         endpoint = "https://accounts.spotify.com/authorize"
         
-        client_id = "cc8ff7b4b79d4b8b9be44854bdb9fbb3"
+        client_id = CLIENT_ID
         response_type = "token"
         redirect_URI = "http://localhost:8888/"
         scope = ""
@@ -552,7 +555,9 @@ def main():
     
     try: 
         init_spotify(spotify_token)
-        spotify_client_is_ready = True
+        
+        if spotify_token.token is not None:
+            spotify_client_is_ready = True
     
     except AuthError:
         pass
@@ -568,7 +573,6 @@ def main():
 3) Leaderboards\n\
 4) Preferences\n\
 5) Save and exit\n")
-        
         
         choice = input()
     
