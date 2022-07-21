@@ -510,7 +510,7 @@ def log_in_to_spotify(login):
             header = {"Authorization": f"Bearer {login.token}"}
             endpoint = "https://api.spotify.com/v1/me"
             
-            r = requests.get(lookup_url, headers=header)
+            r = requests.get(endpoint, headers=header)
             
             r_dic = r.json()
             
