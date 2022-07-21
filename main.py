@@ -54,10 +54,11 @@ class Album:
     def __bool__(self):
         return True
 
-class AccessToken: 
+class SpotifyLogin: 
     def __init__(self):
         self.token=None
         self.expires=None
+        self.account_name=None
     
     def as_dict(self):
         return {'access_token': self.token, 'expires': self.expires}
@@ -150,25 +151,32 @@ def add_album(album_list, calibration_matchups=DEFAULT_CALIBRATION_MATCHUPS, ini
     clear_screen() 
     
     print("\n1) Search for album on Spotify\n\
-2) Add album manually\n")
+2) Add album manually\n\
+3) Return to main menu\n")
     
     choice = input()
     
-    if choice == "1":
-        if not spotify_client_is_ready:
-            clear_screen()
-            
-            input("\nSpotify API client not successfully initialized, please check credentials in 'spotify_api.py'")
-            raise AuthError
-            
-        else:
-            title, artist = search_album_spotify(spotify_token)
-    
-    if choice == "2":
-        title, artist = manual_album_input()
-    
+    while(True):
+        if choice == "1":
+            if not spotify_client_is_ready:
+                clear_screen()
+                
+                input("\nYou are not signed in with Spotify. Please sign in from main menu.")
+                raise AuthError
+                
+            else:
+                title, artist = search_album_spotify(spotify_token)
+                break
+        
+        elif choice == "2":
+            title, artist = manual_album_input()
+            break
+        
+        elif choice == "3":
+            return False
+        
     new_album = Album(1, title, artist, initial_rating)
-    
+        
     for i in range(min(calibration_matchups, len(album_list))):
         clear_screen()
         
@@ -177,7 +185,9 @@ def add_album(album_list, calibration_matchups=DEFAULT_CALIBRATION_MATCHUPS, ini
     
     print("\n")
     
-    return new_album
+    album_list.append(new_album)
+    
+    return True
 
 def search_album_spotify(access_token):
     
@@ -456,57 +466,66 @@ def search_leaderboards(album_list, key, page_size=DEFAULT_PAGE_SIZE):
     
     list_albums(match_list, searchable=False, page_size=page_size, title=f"\nAlbums with {key} matching '{query}':")
 
-def init_spotify(token):
+def log_in_to_spotify(login):
     now_dt = datetime.datetime.now()
     now = datetime.datetime.timestamp(now_dt)
     
-    try:
-        with open(SPOTIFY_TOKEN_PATH, 'r') as f:
-            token_and_expiration = json.load(f)
-            f.close()
+    token_still_valid = auto_login(login)
         
-        token.token = token_and_expiration['access_token']
-        token.expires = token_and_expiration['expires']
-        
-        if token.expires < now:
-            print(token.expires)
-            print(now)
-            input()
-            raise ExpiredTokenError
-        
-    except (FileNotFoundError, ExpiredTokenError):
-        app = QApplication(sys.argv)
-        QApplication.setApplicationName('Sign in with Spotify')
-        window = QMainWindow()
-        
-        window.browser = QWebEngineView()
-        
-        
-        endpoint = "https://accounts.spotify.com/authorize"
-        
-        client_id = CLIENT_ID
-        response_type = "token"
-        redirect_URI = "http://localhost:8888/"
-        scope = ""
-        
-        request_data = urlencode({'response_type': response_type, 'client_id': client_id, 'scope': scope, 'redirect_uri': redirect_URI})
-        
-        lookup_url = f"{endpoint}?{request_data}"
-        
-        lookup_url = f"{endpoint}?{request_data}"        
-        window.browser.setUrl(QUrl(lookup_url))
-        
-        window.setCentralWidget(window.browser)
-        window.setGeometry(0, 0, 600, 800)
-        
-        window.browser.urlChanged.connect(lambda: update_url(window.browser.url(), token, now))
-        window.browser.urlChanged.connect(lambda: window.close())
-        
-        window.show()
-        
-        app.exec()
+    if not token_still_valid:
+        try:
+            app = QApplication(sys.argv)
+            QApplication.setApplicationName('Sign in with Spotify')
+            window = QMainWindow()
+            
+            window.browser = QWebEngineView()
+            
+            
+            endpoint = "https://accounts.spotify.com/authorize"
+            
+            client_id = CLIENT_ID
+            response_type = "token"
+            redirect_URI = "http://localhost:8888/"
+            scope = ""
+            
+            request_data = urlencode({'response_type': response_type, 'client_id': client_id, 'scope': scope, 'redirect_uri': redirect_URI})
+            
+            lookup_url = f"{endpoint}?{request_data}"
+            
+            lookup_url = f"{endpoint}?{request_data}"        
+            window.browser.setUrl(QUrl(lookup_url))
+            
+            window.setCentralWidget(window.browser)
+            window.setGeometry(0, 0, 600, 800)
+            
+            window.browser.urlChanged.connect(lambda: update_url(window.browser.url(), login, now))
+            window.browser.urlChanged.connect(lambda: window.close())
+            
+            window.show()
+            
+            app.exec()
+            
+            header = {"Authorization": f"Bearer {login.token}"}
+            endpoint = "https://api.spotify.com/v1/me"
+            
+            r = requests.get(lookup_url, headers=header)
+            
+            r_dic = r.json()
+            
+            if r.status_code in range(200, 299):
+                login.name = r_dic['display_name']
+                return True
+            
+            else:
+                raise AuthError
+            
+        except AuthError:
+            return False
+    
+    else:
+        return True
 
-def update_url(url, token_object, now):
+def update_url(url, login, now):
     url_str = url.toString()
     if "http://localhost:8888/" in url_str:
         if "access_token=" in url_str:            
@@ -514,16 +533,54 @@ def update_url(url, token_object, now):
             
             print(queries)
             
-            token_object.token = queries['access_token'][0]
-            token_object.expires = now + int(queries['expires_in'][0])
+            login.token = queries['access_token'][0]
+            login.expires = now + int(queries['expires_in'][0])
             
             with open(SPOTIFY_TOKEN_PATH, 'w+') as f:
-                json.dump(token_object.as_dict(), f)
+                json.dump(login.as_dict(), f)
             
         else:
             raise AuthError
+    
+    
 
+def auto_login(login, now=datetime.datetime.timestamp(datetime.datetime.now())):
+    
+    try:
+        with open(SPOTIFY_TOKEN_PATH, 'r') as f:
+            token_and_expiration = json.load(f)
+            f.close()
         
+        login.token = token_and_expiration['access_token']
+        login.expires = token_and_expiration['expires']
+        
+        if login.expires < now:
+            raise ExpiredTokenError
+    
+    except (ExpiredTokenError, FileNotFoundError, json.decoder.JSONDecodeError):
+        return False
+    
+    try:
+        header = {"Authorization": f"Bearer {login.token}"}
+        endpoint = "https://api.spotify.com/v1/me"
+        
+        r = requests.get(endpoint, headers=header)
+        
+        r_dic = r.json()
+        
+        if r.status_code in range(200, 299):
+            login.name = r_dic['display_name']
+        
+        elif r.status_code == 401:
+            raise ExpiredTokenError
+        
+        else:
+            raise AuthError
+    
+    except (AuthError, ExpiredTokenError):
+        return False
+    
+    return True
 
 def join_multiple_artists(artist_list):
     if len(artist_list) > 3:
@@ -550,17 +607,9 @@ def main():
     
     preferences = config()
     
-    spotify_client_is_ready = False
-    spotify_token = AccessToken()
+    spotify_login = SpotifyLogin()
     
-    try: 
-        init_spotify(spotify_token)
-        
-        if spotify_token.token is not None:
-            spotify_client_is_ready = True
-    
-    except AuthError:
-        pass
+    spotify_client_is_ready = auto_login(spotify_login)
     
     while(True):
         clear_screen()
@@ -573,6 +622,12 @@ def main():
 3) Leaderboards\n\
 4) Preferences\n\
 5) Save and exit\n")
+    
+        if spotify_client_is_ready:
+            print(f"Signed in as {spotify_login.name}. Welcome back!\n")
+            
+        else:
+            print("6) Sign in with Spotify\n")
         
         choice = input()
     
@@ -583,9 +638,9 @@ def main():
             
         elif choice == "2":
             try:
-                album_list.append(add_album(album_list, preferences['calibration_matchups'], preferences['initial_rating'], preferences['k'], spotify_client_is_ready, spotify_token.token))
-                album_list = sort_and_rank(album_list)
-                updated = True
+                if add_album(album_list, preferences['calibration_matchups'], preferences['initial_rating'], preferences['k'], spotify_client_is_ready, spotify_login.token):
+                    album_list = sort_and_rank(album_list)
+                    updated = True
             except AuthError:
                 pass
         
@@ -601,5 +656,10 @@ def main():
         elif choice == "5":
             prepare_to_exit(album_list)
             return
+        
+        elif choice == "6" and not spotify_client_is_ready:
+            clear_screen()
+            print("\nSigning in, please follow instructions in browser window...")
+            log_in_to_spotify(spotify_login)
         
 main()
