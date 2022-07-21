@@ -14,7 +14,7 @@ from base64 import b64encode, b64decode
 import requests
 import datetime
 import json
-from urllib.parse import urlencode
+from urllib.parse import urlencode, parse_qs
 import webbrowser
 import sys
 from PyQt5.QtWidgets import *
@@ -24,7 +24,7 @@ from PyQt5.QtCore import *
 # from selenium import webdriver
 
 
-import spotify_api
+# import spotify_api
 
 
 ALBUM_LIST_CSV = "albums.csv"
@@ -61,6 +61,10 @@ class Album:
 class AccessToken: 
     def __init__(self):
         self.token=None
+        self.expires=None
+    
+    def as_dict(self):
+        return {'access_token': self.token, 'expires': self.expires}
 
 class ExpiredTokenError(Exception):
     pass
@@ -456,7 +460,7 @@ def search_leaderboards(album_list, key, page_size=DEFAULT_PAGE_SIZE):
     
     list_albums(match_list, searchable=False, page_size=page_size, title=f"\nAlbums with {key} matching '{query}':")
     
-"""def init_spotify():
+def init_spotify_client_credentials(client_id, client_secret): #not used anymore, left here for legacy purposes
     
     now_dt = datetime.datetime.now()
     now = datetime.datetime.timestamp(now_dt)*1000
@@ -475,9 +479,6 @@ def search_leaderboards(album_list, key, page_size=DEFAULT_PAGE_SIZE):
     except (FileNotFoundError, ExpiredTokenError):
         token_url = "https://accounts.spotify.com/api/token"
         method =  "POST"
-        
-        client_id = spotify_api.client_id
-        client_secret = spotify_api.client_secret
         
         client_credentials = f"{client_id}:{client_secret}"
         client_credentials_b64 = b64encode(client_credentials.encode())
@@ -503,120 +504,72 @@ def search_leaderboards(album_list, key, page_size=DEFAULT_PAGE_SIZE):
             json.dump(token_and_expiration, f)
             
     
-    return access_token"""
-
-# def init_spotify():
-    
-    
-#     # s = Session(webdriver_path='C:/bin/chromedriver', default_timeout=15, browser='chrome')
-#     # s.get("http://localhost:8888/test")
-#     # s.transfer_session_cookies_to_driver()
-    
-#     endpoint = "https://accounts.spotify.com/authorize"
-#     method =  "POST"
-    
-#     client_id = spotify_api.client_id
-#     response_type = "token"
-#     redirect_URI = "http://localhost:8080/"
-#     scope = "user-read-email"
-    
-#     auth_data = urlencode({'response_type': response_type, 'client_id': client_id, 'scope': scope, 'redirect_uri': redirect_URI})
-    
-#     lookup_url = f"{endpoint}?{auth_data}"
-    
-#     driver = webdriver.Chrome()
-#     url = lookup_url #a redirect to a login page occurs
-#     driver.get(url)
-    
-#     # s.driver.get(lookup_url)
-    
-#     request_cookies_browser = driver.get_cookies()
-    
-#     s = requests.Session()
-    
-#     c = [s.cookies.set(c['name'], c['value']) for c in request_cookies_browser]
-    
-    
-#     input("Log into Spotify, then press enter :)")
-    
-#     # s.transfer_driver_cookies_to_session()
-#     # s.copy_user_agent_from_driver()
-    
-#     # headers = {
-#     #     'Content-Type': 'application/json'
-#     # }
-    
-#     # credentials = "include"
-    
-#     r = s.get("http://localhost:8888/getAccessToken")
-    
-#     print(r.json())
-    
-#     input()
+    return access_token
 
 def init_spotify(token):
-    # class Window(QMainWindow):
-    #     def __init__(self, lookup_url):
-            
-    #         super(Window,self).__init__()
-            
-    #         self.browser = QWebEngineView()
-    #         endpoint = "https://accounts.spotify.com/authorize"
-            
-    #         client_id = "cc8ff7b4b79d4b8b9be44854bdb9fbb3"
-    #         response_type = "token"
-    #         redirect_URI = "http://localhost:8888/"
-    #         scope = ""
-            
-    #         request_data = urlencode({'response_type': response_type, 'client_id': client_id, 'scope': scope, 'redirect_uri': redirect_URI})
-            
-    #         lookup_url = f"{endpoint}?{request_data}"        
-    #         self.browser.setUrl(QUrl(lookup_url))
-            
-    #         self.setCentralWidget(self.browser)
-    #         self.showMaximized()
-    #         self.browser.urlChanged.connect(self.updateUrl)
-            
-    #     def updateUrl(self, url):
-    #         return url.toString()
-            
-            
-    app = QApplication(sys.argv)
-    QApplication.setApplicationName('Sign in with Spotify')
-    window = QMainWindow()
+    now_dt = datetime.datetime.now()
+    now = datetime.datetime.timestamp(now_dt)
     
-    window.browser = QWebEngineView()
-    
-    endpoint = "https://accounts.spotify.com/authorize"
-    
-    client_id = "cc8ff7b4b79d4b8b9be44854bdb9fbb3"
-    response_type = "token"
-    redirect_URI = "http://localhost:8888/"
-    scope = ""
-    
-    request_data = urlencode({'response_type': response_type, 'client_id': client_id, 'scope': scope, 'redirect_uri': redirect_URI})
-    
-    lookup_url = f"{endpoint}?{request_data}"
-    
-    lookup_url = f"{endpoint}?{request_data}"        
-    window.browser.setUrl(QUrl(lookup_url))
-    
-    window.setCentralWidget(window.browser)
-    window.showMaximized()
-    
-    window.browser.urlChanged.connect(lambda: update_url(window.browser.url(), token))
-    window.browser.urlChanged.connect(lambda: window.close())
-    
-    window.show()
-    
-    app.exec()
+    try:
+        with open(SPOTIFY_TOKEN_PATH, 'r') as f:
+            token_and_expiration = json.load(f)
+            f.close()
+        
+        token.token = token_and_expiration['access_token']
+        token.expires = token_and_expiration['expires']
+        
+        if token.expires < now:
+            print(token.expires)
+            print(now)
+            input()
+            raise ExpiredTokenError
+        
+    except (FileNotFoundError, ExpiredTokenError):
+        app = QApplication(sys.argv)
+        QApplication.setApplicationName('Sign in with Spotify')
+        window = QMainWindow()
+        
+        window.browser = QWebEngineView()
+        
+        
+        endpoint = "https://accounts.spotify.com/authorize"
+        
+        client_id = "cc8ff7b4b79d4b8b9be44854bdb9fbb3"
+        response_type = "token"
+        redirect_URI = "http://localhost:8888/"
+        scope = ""
+        
+        request_data = urlencode({'response_type': response_type, 'client_id': client_id, 'scope': scope, 'redirect_uri': redirect_URI})
+        
+        lookup_url = f"{endpoint}?{request_data}"
+        
+        lookup_url = f"{endpoint}?{request_data}"        
+        window.browser.setUrl(QUrl(lookup_url))
+        
+        window.setCentralWidget(window.browser)
+        window.setGeometry(0, 0, 600, 800)
+        
+        window.browser.urlChanged.connect(lambda: update_url(window.browser.url(), token, now))
+        window.browser.urlChanged.connect(lambda: window.close())
+        
+        window.show()
+        
+        app.exec()
 
-def update_url(url, token_object):
+def update_url(url, token_object, now):
     url_str = url.toString()
     if "http://localhost:8888/" in url_str:
-        if "access_token=" in url_str:
-            token = url_str.split("access_token=")[1].split("&")[0]
-            token_object.token = token
+        if "access_token=" in url_str:            
+            queries = parse_qs(url_str.split("#")[1])
+            
+            print(queries)
+            
+            token_object.token = queries['access_token'][0]
+            token_object.expires = now + int(queries['expires_in'][0])
+            
+            with open(SPOTIFY_TOKEN_PATH, 'w+') as f:
+                json.dump(token_object.as_dict(), f)
+            
         else:
             raise AuthError
 
