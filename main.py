@@ -418,6 +418,8 @@ def prepare_to_exit(album_list):
             csv_writer.writerow([album.rank, album.title, album.artist, album.rating])
             
         f.close()
+    
+    clear_screen()
 
 def config():
     try:
