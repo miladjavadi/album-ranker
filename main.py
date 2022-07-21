@@ -16,9 +16,16 @@ import datetime
 import json
 from urllib.parse import urlencode
 import webbrowser
-from requestium import Session, Keys
+import sys
+from PyQt5.QtWidgets import *
+from PyQt5.QtWebEngineWidgets import *
+from PyQt5.QtCore import *
+# from requestium import Session, Keys
+# from selenium import webdriver
+
 
 import spotify_api
+
 
 ALBUM_LIST_CSV = "albums.csv"
 PREFERENCES_YAML = "preferences.yml" #yaml
@@ -50,6 +57,10 @@ class Album:
     
     def __bool__(self):
         return True
+
+class AccessToken: 
+    def __init__(self):
+        self.token=None
 
 class ExpiredTokenError(Exception):
     pass
@@ -494,34 +505,122 @@ def search_leaderboards(album_list, key, page_size=DEFAULT_PAGE_SIZE):
     
     return access_token"""
 
-def init_spotify():
+# def init_spotify():
+    
+    
+#     # s = Session(webdriver_path='C:/bin/chromedriver', default_timeout=15, browser='chrome')
+#     # s.get("http://localhost:8888/test")
+#     # s.transfer_session_cookies_to_driver()
+    
+#     endpoint = "https://accounts.spotify.com/authorize"
+#     method =  "POST"
+    
+#     client_id = spotify_api.client_id
+#     response_type = "token"
+#     redirect_URI = "http://localhost:8080/"
+#     scope = "user-read-email"
+    
+#     auth_data = urlencode({'response_type': response_type, 'client_id': client_id, 'scope': scope, 'redirect_uri': redirect_URI})
+    
+#     lookup_url = f"{endpoint}?{auth_data}"
+    
+#     driver = webdriver.Chrome()
+#     url = lookup_url #a redirect to a login page occurs
+#     driver.get(url)
+    
+#     # s.driver.get(lookup_url)
+    
+#     request_cookies_browser = driver.get_cookies()
+    
+#     s = requests.Session()
+    
+#     c = [s.cookies.set(c['name'], c['value']) for c in request_cookies_browser]
+    
+    
+#     input("Log into Spotify, then press enter :)")
+    
+#     # s.transfer_driver_cookies_to_session()
+#     # s.copy_user_agent_from_driver()
+    
+#     # headers = {
+#     #     'Content-Type': 'application/json'
+#     # }
+    
+#     # credentials = "include"
+    
+#     r = s.get("http://localhost:8888/getAccessToken")
+    
+#     print(r.json())
+    
+#     input()
+
+def init_spotify(token):
+    # class Window(QMainWindow):
+    #     def __init__(self, lookup_url):
+            
+    #         super(Window,self).__init__()
+            
+    #         self.browser = QWebEngineView()
+    #         endpoint = "https://accounts.spotify.com/authorize"
+            
+    #         client_id = "cc8ff7b4b79d4b8b9be44854bdb9fbb3"
+    #         response_type = "token"
+    #         redirect_URI = "http://localhost:8888/"
+    #         scope = ""
+            
+    #         request_data = urlencode({'response_type': response_type, 'client_id': client_id, 'scope': scope, 'redirect_uri': redirect_URI})
+            
+    #         lookup_url = f"{endpoint}?{request_data}"        
+    #         self.browser.setUrl(QUrl(lookup_url))
+            
+    #         self.setCentralWidget(self.browser)
+    #         self.showMaximized()
+    #         self.browser.urlChanged.connect(self.updateUrl)
+            
+    #     def updateUrl(self, url):
+    #         return url.toString()
+            
+            
+    app = QApplication(sys.argv)
+    QApplication.setApplicationName('Sign in with Spotify')
+    window = QMainWindow()
+    
+    window.browser = QWebEngineView()
+    
     endpoint = "https://accounts.spotify.com/authorize"
-    method =  "POST"
     
-    client_id = spotify_api.client_id
+    client_id = "cc8ff7b4b79d4b8b9be44854bdb9fbb3"
     response_type = "token"
-    redirect_URI = "http://localhost:8080/"
-    scope = "user-read-email"
+    redirect_URI = "http://localhost:8888/"
+    scope = ""
     
-    auth_data = urlencode({'response_type': response_type, 'client_id': client_id, 'scope': scope, 'redirect_uri': redirect_URI})
+    request_data = urlencode({'response_type': response_type, 'client_id': client_id, 'scope': scope, 'redirect_uri': redirect_URI})
     
-    lookup_url = f"{endpoint}?{auth_data}"
+    lookup_url = f"{endpoint}?{request_data}"
     
-    webbrowser.open(lookup_url)
+    lookup_url = f"{endpoint}?{request_data}"        
+    window.browser.setUrl(QUrl(lookup_url))
     
-    input("Log into Spotify, then press enter :)")
+    window.setCentralWidget(window.browser)
+    window.showMaximized()
     
-    headers = {
-        'Content-Type': 'application/json'
-    }
+    window.browser.urlChanged.connect(lambda: update_url(window.browser.url(), token))
+    window.browser.urlChanged.connect(lambda: window.close())
     
-    credentials = "include"
+    window.show()
     
-    r = requests.post("http://localhost:8888/getAccessToken", headers=headers)
-    
-    print(r.json())
-    
-    input()
+    app.exec()
+
+def update_url(url, token_object):
+    url_str = url.toString()
+    if "http://localhost:8888/" in url_str:
+        if "access_token=" in url_str:
+            token = url_str.split("access_token=")[1].split("&")[0]
+            token_object.token = token
+        else:
+            raise AuthError
+
+        
 
 def join_multiple_artists(artist_list):
     if len(artist_list) > 3:
@@ -549,10 +648,10 @@ def main():
     preferences = config()
     
     spotify_client_is_ready = False
-    spotify_token = None
+    spotify_token = AccessToken()
     
     try: 
-        spotify_token = init_spotify()
+        init_spotify(spotify_token)
         spotify_client_is_ready = True
     
     except AuthError:
@@ -580,7 +679,7 @@ def main():
             
         elif choice == "2":
             try:
-                album_list.append(add_album(album_list, preferences['calibration_matchups'], preferences['initial_rating'], preferences['k'], spotify_client_is_ready, spotify_token))
+                album_list.append(add_album(album_list, preferences['calibration_matchups'], preferences['initial_rating'], preferences['k'], spotify_client_is_ready, spotify_token.token))
                 album_list = sort_and_rank(album_list)
                 updated = True
             except AuthError:
