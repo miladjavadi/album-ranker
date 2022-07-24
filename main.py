@@ -14,6 +14,7 @@ import datetime
 import json
 from urllib.parse import urlencode, parse_qs
 import sys
+import string
 
 # other packages
 import requests
@@ -546,8 +547,9 @@ def log_in_to_spotify(login):
             response_type = "token"
             redirect_URI = "http://localhost:8888/"
             scope = ""
+            state = generate_random_string(16)
             
-            request_data = urlencode({'response_type': response_type, 'client_id': client_id, 'scope': scope, 'redirect_uri': redirect_URI})
+            request_data = urlencode({'response_type': response_type, 'client_id': client_id, 'scope': scope, 'redirect_uri': redirect_URI, 'state': state})
             
             lookup_url = f"{endpoint}?{request_data}"
             
@@ -604,8 +606,30 @@ def update_url(url, login, now):
         else:
             raise AuthError
     
+def generate_random_string(length=16, alphabet="letters"):
     
-
+    # generate a random string of given length using alphabet as character set
+    
+    if alphabet == "lowercase":
+        letters = string.ascii_lowercase
+    elif alphabet == "uppercase":
+        letters = string.ascii_uppercase
+    elif alphabet == "letters":
+        letters = string.ascii_letters
+    elif alphabet == "digits":
+        letters = string.digits
+    elif alphabet == "punctuation":
+        random_string = string.punctuation
+    elif alphabet == "whitespace":
+        alphabet == string.whitespace
+    elif alphabet == "printable":
+        alphabet == string.printable
+    else:
+        raise ValueError(f"'{alphabet}' is not a valid character set")
+        
+    random_string = ''.join(random.choice(letters) for i in range(length))
+    return random_string
+    
 def auto_login(login, now=datetime.datetime.timestamp(datetime.datetime.now())):
     
     # attempts to log in to spotify using previously granted token
