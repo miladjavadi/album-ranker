@@ -727,6 +727,6 @@ def main():
         elif choice == "6" and not spotify_client_is_ready:
             clear_screen()
             print("\nSigning in, please follow instructions in browser window...")
-            log_in_to_spotify(spotify_login)
+            spotify_client_is_ready = log_in_to_spotify(spotify_login)
         
 main()
