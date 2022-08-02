@@ -58,6 +58,9 @@ class Album:
     
     def __bool__(self): # used for checking if a function returns an album instance
         return True 
+    
+    def __eq__(self, other):
+        return (self.title == other.title and self.artist == other.artist)
 
 class SpotifyLogin:
  
@@ -169,38 +172,42 @@ def load_album_list():
     
     return album_list
 
-def add_album(album_list, calibration_matchups=DEFAULT_CALIBRATION_MATCHUPS, initial_rating=DEFAULT_INITIAL_RATING, k=DEFAULT_K, spotify_client_is_ready=False, spotify_token=None):
+def add_album(album_list, calibration_matchups=DEFAULT_CALIBRATION_MATCHUPS, initial_rating=DEFAULT_INITIAL_RATING, k=DEFAULT_K, spotify_client_is_ready=False, spotify_token=None, new_album=None):
     
     # finds a new album and adds to list
     
-    clear_screen() 
-    
-    print("\n1) Search for album on Spotify\n\
+    if new_album is None:
+        clear_screen() 
+        
+        print("\n1) Search for album on Spotify\n\
 2) Add album manually\n\
 3) Return to main menu\n")
-    
-    choice = input()
-    
-    while(True):
-        if choice == "1":
-            if not spotify_client_is_ready:
-                clear_screen()
-                
-                input("\nYou are not signed in with Spotify. Please sign in from main menu.")
-                raise AuthError
-                
-            else:
-                title, artist = search_album_spotify(spotify_token)
+        
+        choice = input()
+        
+        while(True):
+            if choice == "1":
+                if not spotify_client_is_ready:
+                    clear_screen()
+                    
+                    input("\nYou are not signed in with Spotify. Please sign in from main menu.")
+                    raise AuthError
+                    
+                else:
+                    title, artist = search_album_spotify(spotify_token)
+                    break
+            
+            elif choice == "2":
+                title, artist = manual_album_input()
                 break
-        
-        elif choice == "2":
-            title, artist = manual_album_input()
-            break
-        
-        elif choice == "3":
-            return False
-        
-    new_album = Album(1, title, artist, initial_rating)
+            
+            elif choice == "3":
+                return False
+            
+        new_album = Album(1, title, artist, initial_rating)
+    
+    else:
+        new_album.set_rating(initial_rating)
         
     for i in range(min(calibration_matchups, len(album_list))):
         clear_screen()
@@ -545,15 +552,14 @@ def log_in_to_spotify(login):
             
             client_id = CLIENT_ID
             response_type = "token"
-            redirect_URI = "http://localhost:8888/"
-            scope = ""
+            redirect_URI = "http://localhost:8888/callback/"
+            scope = "user-top-read" # set to empty string for last working version
             state = generate_random_string(16)
             
             request_data = urlencode({'response_type': response_type, 'client_id': client_id, 'scope': scope, 'redirect_uri': redirect_URI, 'state': state})
             
             lookup_url = f"{endpoint}?{request_data}"
-            
-            lookup_url = f"{endpoint}?{request_data}"        
+        
             window.browser.setUrl(QUrl(lookup_url))
             
             window.setCentralWidget(window.browser)
@@ -573,6 +579,8 @@ def log_in_to_spotify(login):
             
             r_dic = r.json()
             
+            input(r.status_code)
+            
             if r.status_code in range(200, 299):
                 login.name = r_dic['display_name']
                 return True
@@ -591,7 +599,7 @@ def update_url(url, login, now):
     # slot for when url in browser is updated
     
     url_str = url.toString()
-    if "http://localhost:8888/" in url_str:
+    if "http://localhost:8888/callback" in url_str:
         if "access_token=" in url_str:            
             queries = parse_qs(url_str.split("#")[1])
             
@@ -691,6 +699,61 @@ def join_multiple_artists(artist_list):
 #         else:
 #             top_elos[album.artist] += album.rating
 
+def auto_add(album_list, spotify_client_is_ready=False, spotify_token=None):
+    
+    # adds album from based on most played songs on spotify
+    
+    if spotify_client_is_ready:
+        try:
+            header = {"Authorization": f"Bearer {spotify_token}"}
+            endpoint = "https://api.spotify.com/v1/me/top/tracks"
+            
+            limit = 35
+            time_range = "short_term"
+            request_contents = urlencode({"limit": limit, "time_range": time_range})
+            
+            lookup_url = f"{endpoint}"
+            
+            r = requests.get(lookup_url, headers=header)
+            
+            input(f"{lookup_url}, {r.status_code}")
+            
+            if r.status_code in range(200, 299):
+                r_dic = r.json()
+                
+                suggestion_list = []
+                
+                for song in r_dic['items']:
+                    new_suggestion = Album(1, song['album']['name'], join_multiple_artists(song['album']['artists']), DEFAULT_INITIAL_RATING)
+                    
+                    if new_suggestions not in suggestion_list:
+                        suggestion_list.append(new_suggestion)
+                
+                selected_suggestion = select_from_search_results(suggestion_list, "recently played")
+                
+                add_album(album_list, selected_suggestion)
+            
+            elif r.status_code == 401:
+                raise ExpiredTokenError
+            
+            else:
+                raise AuthError
+        
+        except (AuthError, ExpiredTokenError):
+            
+            clear_screen()
+            
+            input("\nSomething went wrong, please try again later.")
+            raise AuthError
+    
+    else:
+        clear_screen()
+        
+        input("\nSomething went wrong, please try again later.")
+        raise AuthError
+        
+
+
 def main():
     updated = False
     
@@ -715,7 +778,8 @@ def main():
 5) Save and exit\n")
     
         if spotify_client_is_ready:
-            print(f"Signed in as {spotify_login.name}. Welcome back!\n")
+            print(f"Signed in as {spotify_login.name}. Welcome back!\n\n\
+6) Add new album from suggestions\n")
             
         else:
             print("6) Sign in with Spotify\n")
@@ -748,9 +812,17 @@ def main():
             prepare_to_exit(album_list)
             return
         
-        elif choice == "6" and not spotify_client_is_ready:
-            clear_screen()
-            print("\nSigning in, please follow instructions in browser window...")
-            spotify_client_is_ready = log_in_to_spotify(spotify_login)
+        elif choice == "6":
+            if spotify_client_is_ready:
+                try:
+                    if auto_add(album_list, spotify_client_is_ready, spotify_login.token):
+                        album_list = sort_and_rank(album_list)
+                        updated = True
+                except (ExpiredTokenError, AuthError):
+                    pass
+            else:
+                clear_screen()
+                print("\nSigning in, please follow instructions in browser window...")
+                spotify_client_is_ready = log_in_to_spotify(spotify_login)
         
 main()
